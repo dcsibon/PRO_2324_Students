@@ -1,12 +1,31 @@
 import java.sql.Connection
 import java.sql.DriverManager
+import java.sql.SQLException
+import java.sql.SQLTimeoutException
+
+class DatabaseTimeoutException(message: String): Exception(message)
+class SqlErrorException(message: String): Exception(message)
 
 object Database {
-    private const val url = "jdbc:mysql://localhost:3306/studentdb"
-    private const val user = "studentuser"
-    private const val password = "password"
+    private const val URL = "jdbc:mysql://localhost:3306/studentdb"
+    private const val USER = "studentuser"
+    private const val PASSWORD = "password"
 
-    fun getConnection(): Connection {
-        return DriverManager.getConnection(url, user, password)
+    init {
+        try {
+            // Asegurarse de que el driver JDBC de MySQL esté disponible
+            Class.forName("com.mysql.cj.jdbc.Driver");
+        } catch (e: ClassNotFoundException) {
+            e.printStackTrace();
+        }
     }
+
+    fun getConnection(): Connection =
+        try {
+            DriverManager.getConnection(URL, USER, PASSWORD)
+        } catch (e: SQLTimeoutException) {
+            throw DatabaseTimeoutException("La conexión ha excedido el tiempo de espera permitido.")
+        } catch (e: SQLException) {
+            throw SqlErrorException("Error de SQL: ${e.message}")
+        }
 }

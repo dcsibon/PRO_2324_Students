@@ -1,46 +1,49 @@
+import java.sql.Connection
 import java.sql.SQLException
 
 class StudentRepository {
 
-    fun getAllStudents(): List<String> {
-        val students = mutableListOf<String>()
-        Database.getConnection().use { conn ->
-            conn.createStatement().use { stmt ->
-                stmt.executeQuery("SELECT name FROM students").use { rs ->
-                    while (rs.next()) {
-                        students.add(rs.getString("name"))
+    fun getAllStudents(): Result<List<String>> {
+        return try {
+            val connectionDb = Database.getConnection()
+            val students = mutableListOf<String>()
+            connectionDb.use { conn ->
+                conn.createStatement().use { stmt ->
+                    stmt.executeQuery("SELECT name FROM students").use { rs ->
+                        while (rs.next()) {
+                            students.add(rs.getString("name"))
+                        }
                     }
                 }
             }
+            Result.success(students)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
-        return students
     }
 
-    fun updateStudents(students: List<String>) {
-        val connection = Database.getConnection()
-        try {
-            connection.autoCommit = false  // Start transaction
-            connection.createStatement().use { stmt ->
-                stmt.execute("DELETE FROM students")  // Clear the existing data
-
-                val ps = connection.prepareStatement("INSERT INTO students (name) VALUES (?)")
+    fun updateStudents(students: List<String>): Result<Unit> {
+        var connectionDb : Connection? = null
+        return try {
+            connectionDb = Database.getConnection()
+            connectionDb.autoCommit = false
+            connectionDb.createStatement().use { stmt ->
+                stmt.execute("DELETE FROM students")
+            }
+            connectionDb.prepareStatement("INSERT INTO students (name) VALUES (?)").use { ps ->
                 for (student in students) {
                     ps.setString(1, student)
                     ps.executeUpdate()
                 }
-                ps.close()
             }
-            connection.commit()  // Commit transaction
+            connectionDb.commit()
+            Result.success(Unit)
         } catch (e: Exception) {
-            connection.rollback()  // Rollback transaction on error
-            e.printStackTrace()
+            connectionDb?.rollback()
+            Result.failure(e)
         } finally {
-            try {
-                connection.autoCommit = true
-                connection.close()
-            } catch (se: SQLException) {
-                se.printStackTrace()
-            }
+            connectionDb?.autoCommit = true
+            connectionDb?.close()
         }
     }
 

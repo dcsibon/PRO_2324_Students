@@ -34,15 +34,22 @@ class StudentViewModelDb(
 
     override fun loadStudents() {
         CoroutineScope(Dispatchers.Default).launch {
-            for (student in studentRepository.getAllStudents()) {
-                _students.add(student)
-            }
+            val result = studentRepository.getAllStudents()
+            result.onSuccess { studentList ->
+                _students.clear()
+                _students.addAll(studentList)
+            }.onFailure { exception -> updateInfoMessage(exception.message ?: "") }
         }
     }
 
     override fun saveStudents() {
         CoroutineScope(Dispatchers.Default).launch {
-            studentRepository.updateStudents(_students)
+            val result = studentRepository.updateStudents(_students)
+            result.onSuccess {
+                updateInfoMessage("Estudiantes actualizados con éxito.")
+            }.onFailure { exception ->
+                updateInfoMessage(exception.message ?: "Error desconocido al actualizar estudiantes.")
+            }
         }
     }
 
