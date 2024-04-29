@@ -44,8 +44,6 @@ fun main() = application {
         resizable = false,
         onCloseMainWindow = { exitApplication() }
     )
-
-
 }
 
 @Composable
